@@ -20,12 +20,15 @@ def parse_json_data(data):
     assembly_fasta_filename = ''
     assembly_fasta_file_id = ''
     assembly_fasta_file_size = 0
+    assembly_fasta_file_status = ''
     raw_reads_filename = ''
     raw_reads_file_id = ''
     raw_reads_file_size = 0
+    raw_reads_file_status = ''
     bins_fasta_filenames = []
     bins_fasta_file_ids = []
     bins_fasta_file_sizes = []
+    bins_fasta_file_statuses = []
 
     organisms = data.get('organisms', [])
     for organism in organisms:
@@ -37,29 +40,34 @@ def parse_json_data(data):
             file_name = file.get('file_name', '')
             file_id = file.get('_id', '')
             file_size = file.get('file_size', 0)
-            
+            file_status = file.get('metadata', {}).get('data_utilization_status', 'Unknown')
+
             if 'scaffolds.fasta' in file_name:
                 assembly_fasta_filename = file_name
                 assembly_fasta_file_id = file_id
                 assembly_fasta_file_size = file_size if file_size > 0 else assembly_fasta_file_size
+                assembly_fasta_file_status = file_status
             
             if file_name.endswith('fastq.gz'):
                 raw_reads_filename = file_name
                 raw_reads_file_id = file_id
                 raw_reads_file_size = file_size if file_size > 0 else raw_reads_file_size
+                raw_reads_file_status = file_status
             
             if file.get('metadata', {}).get('content_type') == 'Binning Data' and file_name.endswith('.tar.gz'):
                 bins_fasta_filenames.append(file_name)
                 bins_fasta_file_ids.append(file_id)
                 bins_fasta_file_sizes.append(file_size if file_size > 0 else 0)
+                bins_fasta_file_statuses.append(file_status)
 
     bins_fasta_filenames_str = ";".join(bins_fasta_filenames)
     bins_fasta_file_ids_str = ";".join(bins_fasta_file_ids)
     bins_fasta_file_sizes_str = ";".join(map(str, bins_fasta_file_sizes))
+    bins_fasta_file_statuses_str = ";".join(bins_fasta_file_statuses)
     
-    return (jamo_id, assembly_fasta_filename, assembly_fasta_file_id, assembly_fasta_file_size,
-            raw_reads_filename, raw_reads_file_id, raw_reads_file_size,
-            bins_fasta_filenames_str, bins_fasta_file_ids_str, bins_fasta_file_sizes_str)
+    return (jamo_id, assembly_fasta_filename, assembly_fasta_file_id, assembly_fasta_file_size, assembly_fasta_file_status,
+            raw_reads_filename, raw_reads_file_id, raw_reads_file_size, raw_reads_file_status,
+            bins_fasta_filenames_str, bins_fasta_file_ids_str, bins_fasta_file_sizes_str, bins_fasta_file_statuses_str)
 
 def extract_additional_metadata(organism):
     additional_metadata = {
@@ -151,8 +159,12 @@ def main(tsv_path, output_path, metadata_output_path, token):
         meta_writer = csv.writer(meta_out_file, delimiter='\t')
 
         # Write headers
-        output_headers = ['taxon_oid', 'jamo_id', 'assembly_fasta_filename', 'assembly_fasta_file_id', 'assembly_fasta_file_size',
-                          'raw_reads_filename', 'raw_reads_file_id', 'raw_reads_file_size', 'bins_fasta_filename', 'bins_fasta_file_id', 'bins_fasta_file_size']
+        output_headers = [
+            'taxon_oid', 'jamo_id',
+            'assembly_fasta_filename', 'assembly_fasta_file_id', 'assembly_fasta_file_size', 'assembly_fasta_file_status',
+            'raw_reads_filename', 'raw_reads_file_id', 'raw_reads_file_size', 'raw_reads_file_status',
+            'bins_fasta_filename', 'bins_fasta_file_id', 'bins_fasta_file_size', 'bins_fasta_file_status'
+        ]
         meta_headers = ['taxon_oid', 'JAMO id', 'agg_id', 'kingdom', 'label', 'country', 'institution', 'its_sp_id', 'its_ap_id']
         writer.writerow(output_headers)
         meta_writer.writerow(meta_headers)
