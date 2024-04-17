@@ -6,8 +6,8 @@ This Python script is designed to fetch and process genomic data from the Joint 
 
 ### Inputs
 - **TSV File (`--tsv`)**: A tab-separated values file containing taxon OIDs (one per line) which are used to fetch data from the JGI API. **The taxon oid values must be in the first column and it needs a column name (no name requirement).**
-- **Output TSV File (`--output`)**: The path where the script will write the parsed data, including file names and IDs necessary for download requests.
-- **Metadata Output TSV File (`--metadata_output`)**: The path where the script will write additional metadata associated with each taxon OID.
+- **Output TSV File (`--output`)**: The file name the script will write the parsed data, including file names and IDs necessary for download requests.
+- **Metadata Output TSV File (`--metadata_output`)**: TThe file name the script will write additional metadata associated with each taxon OID.
 - **Session Token (`--token`)**: An authorization token required to interact with the JGI API and download files.
 
 ### Outputs
