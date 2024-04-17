@@ -29,6 +29,39 @@ Replace `input_tsv_path.tsv`, `output_tsv_path.tsv`, `metadata_output_tsv_path.t
   - Offer to split the download into multiple smaller requests.
   - If agreed, it will manage the division such that each subset of files is less than 10 TB, making separate API calls for each batch.
 
+## Example Use Case
+
+### Input File
+- **File Name**: `taxon_oids.csv`
+  - This file contains taxon OIDs to fetch genomic data from the JGI API.
+
+### Desired Output Files
+- **Metadata Output File**: `test-metadata-output.tsv`
+- **Parsed Data Output File**: `test-output.tsv`
+
+### Command to Run the Script
+```bash
+python request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer your_api_session_token_here"
+```
+
+Replace `"Bearer your_api_session_token_here"` with your actual JGI API session token.
+
+### Simulated Command-Line Interaction
+Assuming the total file size from `taxon_oids.csv` is 15 TB, which is over the 10 TB limit:
+
+```plaintext
+Warning: The requested data set is very large (15000.00 GB).
+Do you want to split the download into multiple smaller requests? (yes/no): yes
+Proceed with downloading a batch of 20 files? (yes/no): yes
+Running Curl command for pretend :D
+Proceed with downloading a batch of 20 files? (yes/no): yes
+Running Curl command for pretend :D
+Proceed with downloading a batch of 10 files? (yes/no): yes
+Running Curl command for pretend :D
+```
+
+This interaction shows that the script will prompt the user due to the large data size, offer to split the download into smaller parts, and proceed with multiple smaller download requests once confirmed by the user.
+
 ## How to Get the Token
 
 To restore files or download files via the API, you will need to provide your session token. You can get this by clicking on **Copy My Session Token** in the avatar dropdown menu of the JGI browser application (after you log in).
