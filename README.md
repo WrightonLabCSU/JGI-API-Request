@@ -53,14 +53,25 @@ Assuming the total file size from `taxon_oids.csv` is 15 TB, which is over the 1
 Warning: The requested data set is very large (15000.00 GB).
 Do you want to split the download into multiple smaller requests? (yes/no): yes
 Proceed with downloading a batch of 20 files? (yes/no): yes
-Running Curl command for pretend :D
-Proceed with downloading a batch of 20 files? (yes/no): yes
-Running Curl command for pretend :D
-Proceed with downloading a batch of 10 files? (yes/no): yes
-Running Curl command for pretend :D
+Running Curl command...
+
 ```
 
 This interaction shows that the script will prompt the user due to the large data size, offer to split the download into smaller parts, and proceed with multiple smaller download requests once confirmed by the user.
+
+
+## What Happens Next
+
+Once the user replies "YES" to the prompts, a CURL command to request the files to be downloaded is submitted.
+
+On the command line you will recieve an acknoledgement of your request which will list the number of files you wish to restore, a `restore_id` and a `request_status_url`:
+
+`{"updated_count":0,"restored_count":1,"request_id":473828,"request_status_url":"https://files.jgi.doe.gov/request_archived_files/requests/473828"}`
+
+Then you can navigate to this URL to see the status of your request.
+
+You will then recieve and e-mail (connected to your JGI account which you used to get the token) once they are ready to be downloaded (time depends on the size of your request).
+
 
 ## How to Get the Token
 
