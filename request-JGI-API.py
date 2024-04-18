@@ -21,10 +21,12 @@ def parse_json_data(data):
     assembly_fasta_file_id = ''
     assembly_fasta_file_size = 0
     assembly_fasta_file_status = ''
+    assembly_fasta_present = 'no'  # Default to 'no'
     raw_reads_filename = ''
     raw_reads_file_id = ''
     raw_reads_file_size = 0
     raw_reads_file_status = ''
+    raw_reads_present = 'no'  # Default to 'no'
     bins_fasta_filenames = []
     bins_fasta_file_ids = []
     bins_fasta_file_sizes = []
@@ -47,38 +49,67 @@ def parse_json_data(data):
                 assembly_fasta_file_id = file_id
                 assembly_fasta_file_size = file_size if file_size > 0 else assembly_fasta_file_size
                 assembly_fasta_file_status = file_status
-            
-            if file_name.endswith('fastq.gz'):
+                assembly_fasta_present = 'yes'
+
+            if file_name.endswith('fastq.gz') and 'Raw Data' in file.get('metadata', {}).get('portal', {}).get('display_location', []):
                 raw_reads_filename = file_name
                 raw_reads_file_id = file_id
                 raw_reads_file_size = file_size if file_size > 0 else raw_reads_file_size
                 raw_reads_file_status = file_status
-            
+                raw_reads_present = 'yes'
+
             if file.get('metadata', {}).get('content_type') == 'Binning Data' and file_name.endswith('.tar.gz'):
                 bins_fasta_filenames.append(file_name)
                 bins_fasta_file_ids.append(file_id)
                 bins_fasta_file_sizes.append(file_size if file_size > 0 else 0)
                 bins_fasta_file_statuses.append(file_status)
 
-    bins_fasta_filenames_str = ";".join(bins_fasta_filenames)
-    bins_fasta_file_ids_str = ";".join(bins_fasta_file_ids)
-    bins_fasta_file_sizes_str = ";".join(map(str, bins_fasta_file_sizes))
-    bins_fasta_file_statuses_str = ";".join(bins_fasta_file_statuses)
+    bin_count = len(bins_fasta_filenames)  # Actual count of bin files
     
+    # Assuming assembly_file_status and raw_reads_file_status should reflect the actual file status ('Unrestricted' etc.)
     return (jamo_id, assembly_fasta_filename, assembly_fasta_file_id, assembly_fasta_file_size, assembly_fasta_file_status,
             raw_reads_filename, raw_reads_file_id, raw_reads_file_size, raw_reads_file_status,
-            bins_fasta_filenames_str, bins_fasta_file_ids_str, bins_fasta_file_sizes_str, bins_fasta_file_statuses_str)
+            ";".join(bins_fasta_filenames), ";".join(bins_fasta_file_ids), 
+            ";".join(map(str, bins_fasta_file_sizes)), ";".join(bins_fasta_file_statuses), bin_count)
 
-def extract_additional_metadata(organism):
+
+def extract_additional_metadata(organisms):
+    # Initialize with default values
     additional_metadata = {
-        'agg_id': organism.get('agg_id', ''),
-        'kingdom': organism.get('kingdom', ''),
-        'label': organism.get('label', ''),
-        'country': organism['top_hit']['metadata']['proposal']['pi'].get('country', '') if 'top_hit' in organism and 'proposal' in organism['top_hit']['metadata'] else 'N/A',
-        'institution': organism['top_hit']['metadata']['proposal']['pi'].get('institution', '') if 'top_hit' in organism and 'proposal' in organism['top_hit']['metadata'] else 'N/A',
-        'its_sp_id': organism['top_hit']['metadata'].get('analysis_project', {}).get('sequencing_projects', [{}])[0].get('sequencing_project_id', 'N/A'),
-        'its_ap_id': organism['top_hit']['metadata'].get('analysis_project_id', 'N/A')
+        'agg_id': 'N/A',
+        'kingdom': 'N/A',
+        'label': 'N/A',
+        'country': 'N/A',
+        'institution': 'N/A',
+        'its_sp_id': 'N/A',
+        'its_ap_id': 'N/A',
+        'PI_name': 'N/A',
+        'Email': 'N/A',
+        'analysis_project_name': 'N/A'
     }
+
+    if organisms:
+        organism = organisms[0]  # Assume we want to extract from the first organism
+        pi_info = organism.get('top_hit', {}).get('metadata', {}).get('proposal', {}).get('pi', {})
+        analysis_project_info = organism.get('top_hit', {}).get('metadata', {}).get('analysis_project', {})
+
+        # Get sequencing project id safely
+        sequencing_projects = analysis_project_info.get('sequencing_projects', [])
+        its_sp_id = sequencing_projects[0].get('sequencing_project_id', 'N/A') if sequencing_projects else 'N/A'
+
+        additional_metadata.update({
+            'agg_id': organism.get('agg_id', 'N/A'),
+            'kingdom': organism.get('kingdom', 'N/A'),
+            'label': organism.get('label', 'N/A'),
+            'country': pi_info.get('country', 'N/A'),
+            'institution': pi_info.get('institution', 'N/A'),
+            'its_sp_id': its_sp_id,
+            'its_ap_id': organism.get('top_hit', {}).get('metadata', {}).get('analysis_project_id', 'N/A'),
+            'PI_name': f"{pi_info.get('first_name', '')} {pi_info.get('middle_name', '').strip() + ' ' if pi_info.get('middle_name') else ''}{pi_info.get('last_name', '')}".strip(),
+            'Email': pi_info.get('email_address', 'N/A'),
+            'analysis_project_name': analysis_project_info.get('analysis_project_name', 'N/A')
+        })
+
     return additional_metadata
 
 def execute_curl_command(file_ids, token):
@@ -101,10 +132,18 @@ def calculate_total_file_size(output_path):
     with open(output_path, 'r') as file:
         reader = csv.DictReader(file, delimiter='\t')
         for row in reader:
-            total_file_size += int(row['assembly_fasta_file_size']) if row['assembly_fasta_file_size'].isdigit() else 0
-            total_file_size += int(row['raw_reads_file_size']) if row['raw_reads_file_size'].isdigit() else 0
-            bins_sizes = row['bins_fasta_file_size'].split(';')
+            # Handle None for assembly fasta file sizes
+            if row['assembly_fasta_file_size'] and row['assembly_fasta_file_size'].isdigit():
+                total_file_size += int(row['assembly_fasta_file_size'])
+            
+            # Handle None for raw reads file sizes
+            if row['raw_reads_file_size'] and row['raw_reads_file_size'].isdigit():
+                total_file_size += int(row['raw_reads_file_size'])
+            
+            # Handle None for bins fasta file sizes
+            bins_sizes = row['bins_fasta_file_size'].split(';') if row['bins_fasta_file_size'] else []
             total_file_size += sum(int(size) for size in bins_sizes if size.isdigit())
+    
     return total_file_size / (1024 ** 3)  # Convert bytes to GB
 
 def extract_file_ids(output_path):
@@ -114,22 +153,22 @@ def extract_file_ids(output_path):
     with open(output_path, 'r') as file:
         reader = csv.DictReader(file, delimiter='\t')
         for row in reader:
-            # Assuming the file IDs are stored in 'assembly_fasta_file_id' and 'raw_reads_file_id'
+            # Safely handle potentially None values
             if row['assembly_fasta_file_id']:
                 file_ids.append(row['assembly_fasta_file_id'])
                 file_sizes.append(int(row['assembly_fasta_file_size']) if row['assembly_fasta_file_size'].isdigit() else 0)
             if row['raw_reads_file_id']:
                 file_ids.append(row['raw_reads_file_id'])
                 file_sizes.append(int(row['raw_reads_file_size']) if row['raw_reads_file_size'].isdigit() else 0)
-            # Assuming bins file IDs are separated by semicolons like the sizes
-            bins_ids = row['bins_fasta_file_id'].split(';')
-            bins_sizes = row['bins_fasta_file_size'].split(';')
+            bins_ids = row['bins_fasta_file_id'].split(';') if row['bins_fasta_file_id'] else []
+            bins_sizes = row['bins_fasta_file_size'].split(';') if row['bins_fasta_file_size'] else []
             for bin_id, bin_size in zip(bins_ids, bins_sizes):
                 if bin_id and bin_size.isdigit():
                     file_ids.append(bin_id)
                     file_sizes.append(int(bin_size))
 
     return file_ids, file_sizes
+
 
 def split_file_ids(file_ids, file_sizes, max_size_tb=10):
     """Split file IDs into batches, each batch having a total size < max_size_tb (in terabytes)."""
@@ -158,14 +197,17 @@ def main(tsv_path, output_path, metadata_output_path, token):
         writer = csv.writer(out_file, delimiter='\t')
         meta_writer = csv.writer(meta_out_file, delimiter='\t')
 
-        # Write headers
         output_headers = [
-            'taxon_oid', 'jamo_id',
-            'assembly_fasta_filename', 'assembly_fasta_file_id', 'assembly_fasta_file_size', 'assembly_fasta_file_status',
-            'raw_reads_filename', 'raw_reads_file_id', 'raw_reads_file_size', 'raw_reads_file_status',
-            'bins_fasta_filename', 'bins_fasta_file_id', 'bins_fasta_file_size', 'bins_fasta_file_status'
+            'taxon_oid', 'jamo_id', 'assembly_fasta_filename', 'assembly_fasta_file_id', 
+            'assembly_fasta_file_size', 'assembly_fasta_file_status', 'raw_reads_filename', 
+            'raw_reads_file_id', 'raw_reads_file_size', 'raw_reads_file_status', 'bins_fasta_filename', 
+            'bins_fasta_file_id', 'bins_fasta_file_size', 'bins_fasta_file_status'
         ]
-        meta_headers = ['taxon_oid', 'JAMO id', 'agg_id', 'kingdom', 'label', 'country', 'institution', 'its_sp_id', 'its_ap_id']
+        meta_headers = [
+            'taxon_oid', 'JAMO id', 'agg_id', 'kingdom', 'label', 'country', 'institution', 
+            'its_sp_id', 'its_ap_id', 'PI_name', 'Email', 'analysis_project_name', 'Bin_count'
+        ]
+        
         writer.writerow(output_headers)
         meta_writer.writerow(meta_headers)
 
@@ -174,17 +216,22 @@ def main(tsv_path, output_path, metadata_output_path, token):
         for row in reader:
             taxon_oid = row[0]
             data = fetch_json_data(taxon_oid)
-            parsed_data = parse_json_data(data)
-            additional_metadata = extract_additional_metadata(data['organisms'][0]) if data.get('organisms') else {}
-            
-            writer.writerow([taxon_oid] + list(parsed_data))
-            meta_writer.writerow([taxon_oid] + [parsed_data[0]] + list(additional_metadata.values()))
+            if data and 'organisms' in data and data['organisms']:
+                parsed_data = parse_json_data(data)
+                additional_metadata = extract_additional_metadata(data['organisms'])
+                writer.writerow([taxon_oid] + list(parsed_data[:-1]))
+                meta_writer.writerow([taxon_oid] + [parsed_data[0]] + list(additional_metadata.values()) + [parsed_data[-1]])
+            else:
+                print(f"No organism data available for taxon_oid {taxon_oid}")
+                default_data = [taxon_oid] + ['N/A']*13  # Correct number of 'N/A's for the regular output
+                writer.writerow(default_data)
+                default_meta_data = [taxon_oid] + ['N/A']*12  # Correct number of 'N/A's for the metadata output
+                meta_writer.writerow(default_meta_data)
 
     # After processing all rows
     total_file_size_gb = calculate_total_file_size(output_path)
     file_ids, file_sizes = extract_file_ids(output_path)  # Fetch file IDs and sizes
 
-    # Check for large file set
     if total_file_size_gb > 10000:  # More than 10 TB
         print(f"Warning: The requested data set is very large ({total_file_size_gb:.2f} GB).")
         if user_confirmation("Do you want to split the download into multiple smaller requests? (yes/no): ", "YES"):
