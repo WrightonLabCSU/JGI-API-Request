@@ -120,7 +120,6 @@ def execute_curl_command(file_ids, token):
         '-H', 'Content-Type: application/json', 
         '-d', f'{{ "ids": [{file_ids_str}], "send_mail": true, "api_version": "2"}}'
     ]
-    #print("Running Curl command for pretend :D")
     subprocess.run(curl_cmd)
 
 def user_confirmation(prompt, required_response):
