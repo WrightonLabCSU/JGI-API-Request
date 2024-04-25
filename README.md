@@ -80,6 +80,10 @@ Then you can navigate to this URL to see the status of your request.
 
 You will then recieve and e-mail (connected to your JGI account which you used to get the token) once they are ready to be downloaded (time depends on the size of your request).
 
+## Download options
+1) download to personal computer (easy)
+2) Download via command line (put the provided curl command in a sbatch script with 1 cpu and 1gb mem).
+3) Dowload via GLOBUS (start endpoint on server and use GLOBUS online to transfer)
 
 ## How to Get the Token
 
