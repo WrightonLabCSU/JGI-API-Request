@@ -14,7 +14,7 @@ def fetch_json_data(taxon_oid):
     else:
         print(f"Failed to fetch data for {taxon_oid}")
         return {}
-    
+
 def parse_json_data(data):
     jamo_id = 'id-not-found'
     assembly_fasta_filename = ''
@@ -31,13 +31,19 @@ def parse_json_data(data):
     bins_fasta_file_ids = []
     bins_fasta_file_sizes = []
     bins_fasta_file_statuses = []
+    externally_sequenced = 'no'  # Default to 'no'
+    latitude = 'N/A'
+    longitude = 'N/A'
 
     organisms = data.get('organisms', [])
     for organism in organisms:
         top_hit = organism.get('top_hit')
         if top_hit:
             jamo_id = top_hit.get('_id', 'id-not-found')
-        
+            sequencing_project = top_hit.get('metadata', {}).get('sequencing_project', {})
+            if sequencing_project.get('scientific_program_name', '').lower() == 'metagenome':
+                externally_sequenced = 'yes'
+
         for file in organism.get('files', []):
             file_name = file.get('file_name', '')
             file_id = file.get('_id', '')
@@ -64,14 +70,35 @@ def parse_json_data(data):
                 bins_fasta_file_sizes.append(file_size if file_size > 0 else 0)
                 bins_fasta_file_statuses.append(file_status)
 
+            # Extract latitude and longitude from file metadata if available
+            file_metadata = file.get('metadata', {})
+            sow_segment = file_metadata.get('sow_segment', {})
+            gold_data = file_metadata.get('gold_data', {})
+
+            # Check for latitude and longitude in sow_segment
+            if 'latitude_of_sample_collection' in sow_segment and 'longitude_of_sample_collection' in sow_segment:
+                latitude = sow_segment.get('latitude_of_sample_collection', latitude)
+                longitude = sow_segment.get('longitude_of_sample_collection', longitude)
+
+            # Check for latitude and longitude in gold_data
+            if 'latitude' in gold_data and 'longitude' in gold_data:
+                latitude = gold_data.get('latitude', latitude)
+                longitude = gold_data.get('longitude', longitude)
+
+        # Debugging: Print intermediate results
+        #print(f"File metadata: {file_metadata}")
+        #print(f"latitude: {latitude}, longitude: {longitude}")
+
     bin_count = len(bins_fasta_filenames)  # Actual count of bin files
-    
-    # Assuming assembly_file_status and raw_reads_file_status should reflect the actual file status ('Unrestricted' etc.)
+
+    # Debugging: Print final longitude and latitude
+    #print(f"Final longitude: {longitude}, Final latitude: {latitude}")
+
     return (jamo_id, assembly_fasta_filename, assembly_fasta_file_id, assembly_fasta_file_size, assembly_fasta_file_status,
             raw_reads_filename, raw_reads_file_id, raw_reads_file_size, raw_reads_file_status,
             ";".join(bins_fasta_filenames), ";".join(bins_fasta_file_ids), 
-            ";".join(map(str, bins_fasta_file_sizes)), ";".join(bins_fasta_file_statuses), bin_count)
-
+            ";".join(map(str, bins_fasta_file_sizes)), ";".join(bins_fasta_file_statuses), bin_count,
+            externally_sequenced, latitude, longitude)
 
 def extract_additional_metadata(organisms):
     # Initialize with default values
@@ -168,7 +195,6 @@ def extract_file_ids(output_path):
 
     return file_ids, file_sizes
 
-
 def split_file_ids(file_ids, file_sizes, max_size_tb=10):
     """Split file IDs into batches, each batch having a total size < max_size_tb (in terabytes)."""
     batches = []
@@ -196,15 +222,19 @@ def main(tsv_path, output_path, metadata_output_path, token):
         writer = csv.writer(out_file, delimiter='\t')
         meta_writer = csv.writer(meta_out_file, delimiter='\t')
 
+        # Regular output headers
         output_headers = [
             'taxon_oid', 'jamo_id', 'assembly_fasta_filename', 'assembly_fasta_file_id', 
             'assembly_fasta_file_size', 'assembly_fasta_file_status', 'raw_reads_filename', 
             'raw_reads_file_id', 'raw_reads_file_size', 'raw_reads_file_status', 'bins_fasta_filename', 
             'bins_fasta_file_id', 'bins_fasta_file_size', 'bins_fasta_file_status'
         ]
+        
+        # Metadata output headers
         meta_headers = [
             'taxon_oid', 'JAMO id', 'agg_id', 'kingdom', 'label', 'country', 'institution', 
-            'its_sp_id', 'its_ap_id', 'PI_name', 'Email', 'analysis_project_name', 'Bin_count'
+            'its_sp_id', 'its_ap_id', 'PI_name', 'Email', 'analysis_project_name', 'Bin_count', 
+            'Latitude', 'Longitude', 'External'
         ]
         
         writer.writerow(output_headers)
@@ -218,13 +248,15 @@ def main(tsv_path, output_path, metadata_output_path, token):
             if data and 'organisms' in data and data['organisms']:
                 parsed_data = parse_json_data(data)
                 additional_metadata = extract_additional_metadata(data['organisms'])
-                writer.writerow([taxon_oid] + list(parsed_data[:-1]))
-                meta_writer.writerow([taxon_oid] + [parsed_data[0]] + list(additional_metadata.values()) + [parsed_data[-1]])
+                # Write regular output without Bin_count, Latitude, Longitude, and External
+                writer.writerow([taxon_oid] + list(parsed_data[:-4]))  # Exclude last 4 for regular output
+                # Write metadata output including Bin_count, Latitude, Longitude, and External
+                meta_writer.writerow([taxon_oid] + [parsed_data[0]] + list(additional_metadata.values()) + [parsed_data[-4], parsed_data[-2], parsed_data[-1], parsed_data[-3]])
             else:
                 print(f"No organism data available for taxon_oid {taxon_oid}")
                 default_data = [taxon_oid] + ['N/A']*13  # Correct number of 'N/A's for the regular output
                 writer.writerow(default_data)
-                default_meta_data = [taxon_oid] + ['N/A']*12  # Correct number of 'N/A's for the metadata output
+                default_meta_data = [taxon_oid] + ['N/A']*12 + ['N/A', 'N/A', 'N/A', 'N/A']  # Correct number of 'N/A's for the metadata output with the 4 new fields
                 meta_writer.writerow(default_meta_data)
 
     # After processing all rows
