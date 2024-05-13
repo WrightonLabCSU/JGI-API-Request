@@ -15,23 +15,21 @@ def fetch_json_data(taxon_oid):
         print(f"Failed to fetch data for {taxon_oid}")
         return {}
 
-def parse_json_data(data):
+def parse_json_data(data, include_bins=True, include_assemblies=True, include_reads=True):
     jamo_id = 'id-not-found'
     assembly_fasta_filename = ''
     assembly_fasta_file_id = ''
     assembly_fasta_file_size = 0
     assembly_fasta_file_status = ''
-    assembly_fasta_present = 'no'  # Default to 'no'
     raw_reads_filename = ''
     raw_reads_file_id = ''
     raw_reads_file_size = 0
     raw_reads_file_status = ''
-    raw_reads_present = 'no'  # Default to 'no'
     bins_fasta_filenames = []
     bins_fasta_file_ids = []
     bins_fasta_file_sizes = []
     bins_fasta_file_statuses = []
-    externally_sequenced = 'no'  # Default to 'no'
+    externally_sequenced = 'no'
     latitude = 'N/A'
     longitude = 'N/A'
 
@@ -50,21 +48,19 @@ def parse_json_data(data):
             file_size = file.get('file_size', 0)
             file_status = file.get('metadata', {}).get('data_utilization_status', 'Unknown')
 
-            if 'scaffolds.fasta' in file_name:
+            if include_assemblies and 'scaffolds.fasta' in file_name:
                 assembly_fasta_filename = file_name
                 assembly_fasta_file_id = file_id
                 assembly_fasta_file_size = file_size if file_size > 0 else assembly_fasta_file_size
                 assembly_fasta_file_status = file_status
-                assembly_fasta_present = 'yes'
 
-            if file_name.endswith('fastq.gz') and 'Raw Data' in file.get('metadata', {}).get('portal', {}).get('display_location', []):
+            if include_reads and file_name.endswith('fastq.gz') and 'Raw Data' in file.get('metadata', {}).get('portal', {}).get('display_location', []):
                 raw_reads_filename = file_name
                 raw_reads_file_id = file_id
                 raw_reads_file_size = file_size if file_size > 0 else raw_reads_file_size
                 raw_reads_file_status = file_status
-                raw_reads_present = 'yes'
 
-            if file.get('metadata', {}).get('content_type') == 'Binning Data' and file_name.endswith('.tar.gz'):
+            if include_bins and file.get('metadata', {}).get('content_type') == 'Binning Data' and file_name.endswith('.tar.gz'):
                 bins_fasta_filenames.append(file_name)
                 bins_fasta_file_ids.append(file_id)
                 bins_fasta_file_sizes.append(file_size if file_size > 0 else 0)
@@ -85,14 +81,7 @@ def parse_json_data(data):
                 latitude = gold_data.get('latitude', latitude)
                 longitude = gold_data.get('longitude', longitude)
 
-        # Debugging: Print intermediate results
-        #print(f"File metadata: {file_metadata}")
-        #print(f"latitude: {latitude}, longitude: {longitude}")
-
-    bin_count = len(bins_fasta_filenames)  # Actual count of bin files
-
-    # Debugging: Print final longitude and latitude
-    #print(f"Final longitude: {longitude}, Final latitude: {latitude}")
+    bin_count = len(bins_fasta_filenames) if include_bins else 0  # Actual count of bin files
 
     return (jamo_id, assembly_fasta_filename, assembly_fasta_file_id, assembly_fasta_file_size, assembly_fasta_file_status,
             raw_reads_filename, raw_reads_file_id, raw_reads_file_size, raw_reads_file_status,
@@ -189,9 +178,9 @@ def extract_file_ids(output_path):
             bins_ids = row['bins_fasta_file_id'].split(';') if row['bins_fasta_file_id'] else []
             bins_sizes = row['bins_fasta_file_size'].split(';') if row['bins_fasta_file_size'] else []
             for bin_id, bin_size in zip(bins_ids, bins_sizes):
-                if bin_id and bin_size.isdigit():
-                    file_ids.append(bin_id)
-                    file_sizes.append(int(bin_size))
+                            if bin_id and bin_size.isdigit():
+                                file_ids.append(bin_id)
+                                file_sizes.append(int(bin_size))
 
     return file_ids, file_sizes
 
@@ -216,7 +205,7 @@ def split_file_ids(file_ids, file_sizes, max_size_tb=10):
     
     return batches
 
-def main(tsv_path, output_path, metadata_output_path, token):
+def main(tsv_path, output_path, metadata_output_path, token, include_bins, include_assemblies, include_reads):
     with open(tsv_path, 'r') as tsv_file, open(output_path, 'w', newline='') as out_file, open(metadata_output_path, 'w', newline='') as meta_out_file:
         reader = csv.reader(tsv_file, delimiter='\t')
         writer = csv.writer(out_file, delimiter='\t')
@@ -242,11 +231,12 @@ def main(tsv_path, output_path, metadata_output_path, token):
 
         next(reader, None)  # Skip header row
 
+
         for row in reader:
             taxon_oid = row[0]
             data = fetch_json_data(taxon_oid)
             if data and 'organisms' in data and data['organisms']:
-                parsed_data = parse_json_data(data)
+                parsed_data = parse_json_data(data, include_bins=include_bins, include_assemblies=include_assemblies, include_reads=include_reads)
                 additional_metadata = extract_additional_metadata(data['organisms'])
                 # Write regular output without Bin_count, Latitude, Longitude, and External
                 writer.writerow([taxon_oid] + list(parsed_data[:-4]))  # Exclude last 4 for regular output
@@ -280,6 +270,9 @@ if __name__ == "__main__":
     parser.add_argument("--output", required=True, type=str, help="Path to the output TSV file.")
     parser.add_argument("--metadata_output", required=True, type=str, help="Path to the output metadata TSV file.")
     parser.add_argument("--token", required=True, type=str, help="Authorization token for API access.")
+    parser.add_argument("--no_bins", action='store_true', help="Exclude bin files from processing.")
+    parser.add_argument("--no_assemblies", action='store_true', help="Exclude assembly files from processing.")
+    parser.add_argument("--no_reads", action='store_true', help="Exclude raw reads files from processing.")
 
     args = parser.parse_args()
-    main(args.tsv, args.output, args.metadata_output, args.token)
+    main(args.tsv, args.output, args.metadata_output, args.token, not args.no_bins, not args.no_assemblies, not args.no_reads)
