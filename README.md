@@ -10,7 +10,7 @@ This Python script is designed to fetch and process genomic data from the Joint 
 *Note:* Even if you answer "No" to the final prompt to download the files, you will still get the generated metadata table and output table.
 
 
-## Inputs and Outputs
+## Inputs, Outputs and Command line options
 
 ### Inputs
 - **TSV File (`--tsv`)**: A tab-separated values file containing taxon OIDs (one per line) which are used to fetch data from the JGI API. **The taxon oid values must be in the first column and it needs a column name (no name requirement).**
@@ -21,6 +21,14 @@ This Python script is designed to fetch and process genomic data from the Joint 
 ### Outputs
 - **Output TSV File**: Contains file information like names, IDs, and sizes necessary for download requests.
 - **Metadata Output TSV File**: Contains additional metadata such as the kingdom, label, country, and institutional data associated with each taxon OID.
+
+### Additional command line options
+
+By default, this script will download assemblies, raw data (reads) and bins. You can use the options below to remove each of these from being downloaded. 
+
+- `--no_assemblies` : Do not pull assembly data or include assemblies in the download request
+- `--no_reads` : Do not pull reads or include reads in the download request
+- `-no_bins` : Do not pull bin data or include bins in the download request
 
 ## Example Usage
 
