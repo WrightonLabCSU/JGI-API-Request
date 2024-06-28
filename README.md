@@ -33,7 +33,7 @@ By default, this script will download assemblies, raw data (reads) and bins. You
 ## Example Usage
 
 ```bash
-python request-JGI-API.py --tsv input_tsv_path.tsv --output output_tsv_path.tsv --metadata_output metadata_output_tsv_path.tsv --token "Bearer your_api_session_token_here"
+python3 request-JGI-API.py --tsv input_tsv_path.tsv --output output_tsv_path.tsv --metadata_output metadata_output_tsv_path.tsv --token "Bearer your_api_session_token_here"
 ```
 
 Replace `input_tsv_path.tsv`, `output_tsv_path.tsv`, `metadata_output_tsv_path.tsv`, and `your_api_session_token_here` with your actual file paths and API token.
@@ -57,13 +57,13 @@ Replace `input_tsv_path.tsv`, `output_tsv_path.tsv`, `metadata_output_tsv_path.t
 
 ### Command to Run the Script
 ```bash
-python request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer your_api_session_token_here"
+python3 request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer your_api_session_token_here"
 ```
 
 ```bash
-python request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer /api/sessions/9e062d1805e57e9b36291a821ba58f29"
+python3 request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer /api/sessions/9e062d1805e57e9b36291a821ba58f29"
 ```
-
+**NOTE: The W2 uses a very outdated version of python. Ensure you are NOT in a conda environment and that you use `python3` to call the script.**
 
 Replace `"Bearer your_api_session_token_here"` with your actual JGI API session token.
 
