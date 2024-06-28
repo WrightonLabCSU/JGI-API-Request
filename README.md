@@ -16,7 +16,7 @@ This Python script is designed to fetch and process genomic data from the Joint 
 - **TSV File (`--tsv`)**: A tab-separated values file containing taxon OIDs (one per line) which are used to fetch data from the JGI API. **The taxon oid values must be in the first column and it needs a column name (no name requirement).**
 - **Output TSV File (`--output`)**: The file name the script will write the parsed data, including file names and IDs necessary for download requests.
 - **Metadata Output TSV File (`--metadata_output`)**: TThe file name the script will write additional metadata associated with each taxon OID.
-- **Session Token (`--token`)**: An authorization token required to interact with the JGI API and download files.
+- **Session Token (`--token`)**: An authorization token required to interact with the JGI API and download files. Get from here: https://data.jgi.doe.gov/
 
 ### Outputs
 - **Output TSV File**: Contains file information like names, IDs, and sizes necessary for download requests.
@@ -59,6 +59,11 @@ Replace `input_tsv_path.tsv`, `output_tsv_path.tsv`, `metadata_output_tsv_path.t
 ```bash
 python request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer your_api_session_token_here"
 ```
+
+```bash
+python request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer /api/sessions/9e062d1805e57e9b36291a821ba58f29"
+```
+
 
 Replace `"Bearer your_api_session_token_here"` with your actual JGI API session token.
 
