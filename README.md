@@ -4,7 +4,7 @@ This Python script is designed to fetch and process genomic data from the Joint 
 
 **This is hard-coded to download assembly files (fasta), bin files (fasta) and raw data (fastq) files.**
 
-**If you want other files, reach out to Reed.**
+**If you want other files, reach out to Rich via Kayla.**
 
 
 *Note:* Even if you answer "No" to the final prompt to download the files, you will still get the generated metadata table and output table.
