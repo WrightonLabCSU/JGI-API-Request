@@ -63,7 +63,7 @@ python3 request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metad
 ```bash
 python3 request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer /api/sessions/9e062d1805e57e9b36291a821ba58f29"
 ```
-**NOTE: The W2 uses a very outdated version of python. Ensure you are NOT in a conda environment and that you use `python3` to call the script.**
+**NOTE: Ensure you are NOT in a conda environment and that you use `python3` to call the script. (This is specific to WrightonLabCSU users on the W2 server.**
 
 Replace `"Bearer your_api_session_token_here"` with your actual JGI API session token.
 
