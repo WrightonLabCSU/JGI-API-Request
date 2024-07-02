@@ -34,6 +34,8 @@ By default, this script will download assemblies, raw data (reads) and bins. You
 
 **On the W2 Server you need to specify the path to the script "/ORG-Data/scripts/request-JGI-API.py**
 
+**Do not put this in a SLURM script as the user needs to respond "YES" to initiate the download.**
+
 ```bash
 python3 request-JGI-API.py --tsv input_tsv_path.tsv --output output_tsv_path.tsv --metadata_output metadata_output_tsv_path.tsv --token "Bearer your_api_session_token_here"
 ```
