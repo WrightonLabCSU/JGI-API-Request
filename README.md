@@ -60,8 +60,10 @@ Replace `input_tsv_path.tsv`, `output_tsv_path.tsv`, `metadata_output_tsv_path.t
 python3 request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer your_api_session_token_here"
 ```
 
+**On the W2 Server you need to specify the path to the script "/ORG-Data/scripts/request-JGI-API.py**
+
 ```bash
-python3 request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer /api/sessions/9e062d1805e57e9b36291a821ba58f29"
+python3 /ORG-Data/scripts/request-JGI-API.py --tsv taxon_oids.csv --output test-output.tsv --metadata_output test-metadata-output.tsv --token "Bearer /api/sessions/9e062d1805e57e9b36291a821ba58f29"
 ```
 **NOTE: Ensure you are NOT in a conda environment and that you use `python3` to call the script. (This is specific to WrightonLabCSU users on the W2 server.**
 
